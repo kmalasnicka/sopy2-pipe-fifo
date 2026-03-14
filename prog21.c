@@ -7,10 +7,12 @@
 #include <sys/types.h>
 #include <ctype.h> //isalnum()
 
+//kient -> fifo -> serwer
+//klient: otwiera plik, czyta dane z pliku, wysyla je do fifo, konczy gdzy wysle caly plik
+//serwer: tworzy fifo, czeka az klienci beda cos wysylac, czyta dane z fifo, usuwa znaki niealfabetyczne, wypisuje wynik na ekran
+
 #define ERR(source) (perror(source), fprintf(stderr, "%s:%d\n", __FILE__, __LINE__), exit(EXIT_FAILURE))
 
-//uproszczona wersja komenda cat robi jako klient
-//serwer tworzt fifo, czyta z niego, zostawia tylko litery i cyfry i wypisuje na ekran
 void usage(int argc, char **argv){
     printf("usage %s: fifo file\n", argv[0]);
     exit(EXIT_FAILURE);
@@ -36,5 +38,5 @@ int main(int argc, char **argv){
     if(close(fifo) < 0) ERR("close fifo"); //zamykamy deskryptor po skonczeniu czytania
     return EXIT_SUCCESS;
 }
-
+//komenda cat robi jako klient!
 //cat plik > myfifo - owtiera plik czyta jego zawartosc i zapisuje dane do FIFO fmyifo
