@@ -12,7 +12,7 @@
 
 #define ERR(source) (perror(source), fprintf(stderr, "%s:%d\n", __FILE__, __LINE__), exit(EXIT_FAILURE))
 #define MAX_BUF 200 //maksymalna dlugosc danych wysylanych przez dziecko
-volatile sig_atomic_t last_signal = 0; //zmienna do ostatniego sygnalu
+volatile sig_atomic_t sigint_count = 0;
 
 //1 wspolny pipe R - wszystkie dzieci pisza do rodzica
 //n prywatnych pipeow - rodzic pisze osobno do kazdego dziecka
@@ -33,7 +33,9 @@ int sethandler(void (*f)(int), int sigNo){ //ustawia handler sygnalu
     return 0;
 }
 
-void sig_handler(int sig) {last_signal = sig;} //handler zapamietujacy sygnal
+void sig_handler(int sig) {
+    if(sig == SIGINT) sigint_count++;
+} 
  
 void sig_killme(int sig){ //handler dziecka
     if(rand() % 5 == 0) exit(EXIT_SUCCESS); //dziecko po sigint ma 20% szans umrzec, losuje liczbe 0..4
@@ -63,7 +65,7 @@ void parent_work(int n, int *children_pipes, int R_read){ //R_read - deskryptor 
     if(sethandler(sig_handler, SIGINT)) ERR("setting SIGINT handler in parent"); //po ctr+c sygnal zapisywany jest do last_signal i rodzic nie umrze od razu
     
     while(1){
-        if(last_signal == SIGINT){ //jesli byl sygnal ctr+c
+        while(sigint_count > 0){ //sygnal/sygnaly ctr+c
             int i = rand() % n; //losujemy indeks dziecka
             //szuka pierwsze aktywne dziecko, ktorego pipe do zapisu nie jest zamkniety
             int found = 0; //flaga mowiaca czy znaleziono dziecko
@@ -83,7 +85,7 @@ void parent_work(int n, int *children_pipes, int R_read){ //R_read - deskryptor 
                     children_pipes[2 * i + 1] = 0; //oznaczamy pipe jako nieaktywny
                 }
             }
-            last_signal = 0; //po obsluzeniu sygnalu zerujemy zmienna globalna, sygnal zostal obsluzony
+            sigint_count--; 
         }
         status = read(R_read, &size, 1); //odczytujemy rozmiar wiadomosci, odczytujemy 1 bajt ktory zawiera dlugosc wiadomosci, dziecko wysyla np: 5aaaaa
         if(status < 0 && errno == EINTR) continue; //jesli read zostal przerwany przez sygnal, wracamy do petli
